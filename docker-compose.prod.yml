@@ -1,0 +1,20 @@
+# Production override — used in CI deploy job and on any host that shouldn't
+# build from source. Merge with the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# IMAGE_TAG defaults to "latest"; override with e.g. IMAGE_TAG=sha-abc1234
+
+name: netpulse
+
+services:
+  frontend:
+    build: !reset null
+    image: ghcr.io/jona10i/netpulse-frontend:${IMAGE_TAG:-latest}
+
+  api:
+    build: !reset null
+    image: ghcr.io/jona10i/netpulse-backend:${IMAGE_TAG:-latest}
+    # Production: no --reload, no source bind-mount
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
+    volumes: !reset []

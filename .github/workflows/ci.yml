@@ -96,3 +96,49 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy (compose up --pull always)
+    runs-on: ubuntu-latest
+    needs: [build-frontend, build-backend]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull latest images and bring stack up
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.prod.yml \
+            up --pull always --detach --wait \
+            --wait-timeout 120
+
+      - name: Smoke-test frontend
+        run: |
+          sleep 5
+          curl --fail --silent --max-time 10 http://localhost:5173 > /dev/null
+          echo "Frontend OK"
+
+      - name: Smoke-test API health
+        run: |
+          curl --fail --silent --max-time 10 http://localhost:8000/health
+          echo "API OK"
+
+      - name: Tear down (CI runner cleanup)
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml down --volumes
