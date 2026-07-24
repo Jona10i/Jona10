@@ -213,6 +213,11 @@ The user uploaded a zip snapshot of the upstream project. Full-tree diff showed 
 - **Root-cause hypothesis**: the platform's canonical workspace copy is frozen at the Round-13 era because **"Workspace finalization" keeps failing** (the user saw `Workspace finalization failed. Retry this candidate.`). Each turn boundary re-syncs the sandbox from that stale canonical copy → our newer edits get rolled back. **Action for user**: hit "Retry this candidate" in the platform UI; if finalization succeeds, the canonical copy updates and the reverts should stop. If it keeps failing, report to platform support (mention both symptoms).
 - **Turn-start ritual from now on**: `git status` → if dirty without our own edits, `git restore . && npm run build` + restart `preview`.
 
+## Round 21 — Third reversion confirmed: the loop is every turn boundary
+
+- Same 4 files reverted again. The pattern is now certain: **every turn boundary re-syncs from the stale Round-13 canonical copy** (consistent with the failed-finalization hypothesis — the user-side "Retry this candidate" hasn't succeeded yet). The git ritual handled it in under 2 minutes: restore → build → restart (gen 8) → full verify (local + tunnel endpoints, probe JSON, WS OPEN ×2, all source markers present).
+- This loop will continue until platform finalization succeeds. The git safety net makes it an inconvenience, not data loss.
+
 ---
 
 ## ⏳ Pending / next up
