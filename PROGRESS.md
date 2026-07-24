@@ -218,6 +218,13 @@ The user uploaded a zip snapshot of the upstream project. Full-tree diff showed 
 - Same 4 files reverted again. The pattern is now certain: **every turn boundary re-syncs from the stale Round-13 canonical copy** (consistent with the failed-finalization hypothesis — the user-side "Retry this candidate" hasn't succeeded yet). The git ritual handled it in under 2 minutes: restore → build → restart (gen 8) → full verify (local + tunnel endpoints, probe JSON, WS OPEN ×2, all source markers present).
 - This loop will continue until platform finalization succeeds. The git safety net makes it an inconvenience, not data loss.
 
+## Round 22 — Finalization experiment: tunnel stopped as prime suspect
+
+- Fourth reversion handled by the ritual (restore → build → gen 9 → verified).
+- **Correlation noticed**: finalization last succeeded around Round 13 — the `cloudflared` **quick-tunnel job started in Round 15**, and finalization has failed ever since. A persistent outbound QUIC connection is a plausible blocker for a workspace snapshotter.
+- **Experiment**: stopped the `tunnel` job (its URL is now dead) and asked the user to hit **"Retry this candidate"** with no tunnel running. If next turn's `git status` is clean, finalization succeeded and the loop is broken; a fresh tunnel (new URL) will then be started.
+- **Note for user**: if finalization still fails with the tunnel stopped, next suspects are the long-running `preview` job itself, or a pure platform-side fault → support ticket.
+
 ---
 
 ## ⏳ Pending / next up
