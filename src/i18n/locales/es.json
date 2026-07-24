@@ -1,0 +1,65 @@
+{
+  "common": {
+    "welcome": "Bienvenido",
+    "search": "Buscar...",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "loading": "Cargando...",
+    "settings": "Ajustes",
+    "logout": "Cerrar Sesión",
+    "optional": "(Opcional)"
+  },
+  "sidebar": {
+    "channels": "Canales",
+    "directMessages": "Mensajes Directos",
+    "files": "Archivos",
+    "auditLogs": "Registros de Auditoría",
+    "newChannel": "Nuevo Canal",
+    "createChannel": "Crear Canal",
+    "channelName": "Nombre del Canal",
+    "channelDescription": "Descripción",
+    "isPrivate": "Canal Privado",
+    "privateDescription": "Solo los miembros invitados pueden ver este canal.",
+    "create": "Crear"
+  },
+  "chat": {
+    "placeholder": "Escribe un mensaje...",
+    "send": "Enviar",
+    "confirmFile": "Confirmar Subida de Archivo",
+    "confirmFileMessage": "¿Estás seguro de que quieres enviar este archivo al espacio de trabajo?",
+    "confirmSend": "Enviar Archivo"
+  },
+  "files": {
+    "title": "Recursos del Espacio de Trabajo",
+    "subtitle": "Repositorio de archivos compartido para una colaboración en equipo fluida.",
+    "syncLocal": "Sincronización Local",
+    "download": "Descargar",
+    "upload": "Subir Archivo",
+    "filterByOwner": "Filtrar por Propietario",
+    "allOwners": "Todos los Propietarios",
+    "searchPlaceholder": "Buscar por nombre de archivo...",
+    "editMessage": "Editar Mensaje",
+    "save": "Guardar",
+    "edited": "Editado",
+    "confirmSync": "Confirmar Sincronización Local",
+    "confirmSyncMessage": "Esto sobrescribirá cualquier archivo existente con el mismo nombre en su directorio local. ¿Desea continuar?",
+    "syncProceed": "Sincronizar Ahora",
+    "syncPathLabel": "Carpeta de Destino (Opcional)",
+    "syncPathPlaceholder": "ej. descargas/proyecto1"
+  },
+  "audit": {
+    "title": "Auditoría de Actividad",
+    "subtitle": "Registro de transparencia y seguridad de todos los eventos del espacio.",
+    "event": "Evento",
+    "user": "Usuario",
+    "time": "Hora",
+    "noLogs": "No se han encontrado registros de actividad."
+  },
+  "empty": {
+    "files": "No se encontraron archivos",
+    "filesSubtitle": "Sube algo en un canal para verlo aquí.",
+    "messages": "Inicio del espacio",
+    "messagesSubtitle": "Los archivos compartidos aquí están disponibles instantáneamente para todos."
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "SwiftyDrop Workspace",
+  "description": "Professional real-time communication and file transfer platform for seamless office collaboration without physical drives.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SwiftyDrop | Modern Workspace</title>
+    <meta name="description" content="SwiftyDrop Workspace — high-velocity office links and sync: chat, files, meetings, and scheduling in one place." />
+    <meta name="theme-color" content="#2563eb" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <script>
+      // Early diagnostics: surface script errors and unhandled promise rejections
+      // in the console before React mounts (ported from upstream).
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.message, e.filename, e.lineno, e.colno, e.error);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled rejection:', e.reason);
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

@@ -1,0 +1,289 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 1. Primitive Definitions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'member') == 'admin';
+    }
+
+    // 2. Validation Blueprints
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'status', 'lastSeen']) &&
+             data.keys().size() >= 4 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.status in ['online', 'offline', 'away'] &&
+             data.get('lastRead', {}) is map &&
+             data.get('lastRead', {}).size() <= 600 &&
+             data.get('role', 'member') in ['admin', 'member', 'guest'] &&
+             data.get('channelRoles', {}) is map &&
+             data.get('mutedChannels', []) is list &&
+             data.get('pinnedChannels', []) is list &&
+             data.get('pinnedDMs', []) is list &&
+             data.get('publicKey', '') is string &&
+             data.get('department', '') is string &&
+             data.get('ipAddress', '') is string &&
+             data.get('companyName', '') is string && data.get('companyName', '').size() <= 100 &&
+             data.get('companyType', 'other') in ['tech', 'finance', 'healthcare', 'other'];
+    }
+
+    function isValidChannel(data) {
+      return data.keys().hasAll(['name', 'isPrivate']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.isPrivate is bool &&
+             data.get('icon', '') is string && data.get('icon', '').size() <= 50 &&
+             data.get('members', []) is list && data.get('members', []).size() <= 1000 &&
+             data.get('admins', []) is list && data.get('admins', []).size() <= 1000 &&
+             data.get('mutedMembers', []) is list && data.get('mutedMembers', []).size() <= 1000;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['channelId', 'senderId', 'senderName', 'content', 'timestamp', 'type']) &&
+             data.senderId == request.auth.uid &&
+             data.content is string && data.content.size() <= 10000 &&
+             data.timestamp is number &&
+             // security_spec.md #9: reject timestamps injected from the future (5-min clock-skew tolerance)
+             data.timestamp <= request.time.toMillis() + 300000 &&
+             data.get('editedAt', 0) is number &&
+             data.type in ['text', 'file'] &&
+             data.get('threadId', '') is string &&
+             data.get('replyCount', 0) is number &&
+             data.get('reactions', {}) is map;
+    }
+
+    function isValidFile(data) {
+      return data.keys().hasAll(['name', 'size', 'type', 'ownerId', 'ownerName', 'url', 'createdAt', 'category']) &&
+             data.ownerId == request.auth.uid &&
+             data.name is string && data.name.size() <= 255 &&
+             // security_spec.md #8: reject negative sizes and impossible categories
+             data.size is number && data.size >= 0 &&
+             data.type is string && data.type.size() <= 255 &&
+             data.ownerName is string && data.ownerName.size() <= 100 &&
+             data.url is string && data.url.size() <= 2048 &&
+             data.createdAt is number &&
+             data.category in ['document', 'image', 'video', 'archive', 'other'] &&
+             data.get('important', false) is bool &&
+             data.get('versions', []) is list && data.get('versions', []).size() <= 100 &&
+             data.get('updatedAt', 0) is number;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['type', 'action', 'userId', 'userName', 'timestamp', 'severity']) &&
+             data.userId == request.auth.uid &&
+             data.type in ['auth', 'file', 'channel', 'system'] &&
+             data.severity in ['info', 'warning', 'critical'];
+    }
+
+    function isValidTyping(data) {
+      return data.keys().hasAll(['channelId', 'userId', 'userName', 'isTyping', 'updatedAt']) &&
+             data.channelId is string &&
+             data.userId == request.auth.uid &&
+             data.userName is string &&
+             data.isTyping is bool &&
+             data.updatedAt is number &&
+             (data.get('threadId', '') is string);
+    }
+
+    // 3. Entity Rules
+    match /{path=**}/messages/{messageId} {
+      allow read: if isSignedIn();
+    }
+
+    function isValidMeeting(data) {
+      return data.keys().hasAll(['title', 'startTime', 'endTime', 'organizerId', 'attendees']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.startTime is number &&
+             data.endTime is number &&
+             data.organizerId is string &&
+             data.attendees is list && data.attendees.size() <= 200 &&
+             (data.get('description', '') is string) &&
+             (data.get('platform', '') is string);
+    }
+    
+    function isValidReminder(data) {
+      return data.keys().hasAll(['userId', 'title', 'completed', 'notifyTime']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.completed is bool &&
+             data.notifyTime is number;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isValidUser(incoming()) && (
+                      (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastSeen', 'avatar', 'name', 'department', 'ipAddress', 'lastRead', 'publicKey', 'pinnedChannels', 'pinnedDMs'])) ||
+                      (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'companyName', 'companyType'])) ||
+                      (isOwner(userId) && (request.auth.token.email in ['tenantsitsolutions@gmail.com', 'jonathanigimoh@gmail.com'] || existing().get('role', 'member') == 'admin') && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastSeen', 'avatar', 'name', 'department', 'ipAddress', 'lastRead', 'publicKey', 'role', 'companyName', 'companyType', 'pinnedChannels', 'pinnedDMs']))
+                    );
+                    
+      match /reminders/{reminderId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidReminder(incoming());
+        allow update: if isOwner(userId) && isValidReminder(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'completed', 'notifyTime']);
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /channels/{channelId} {
+      // Helper for hierarchical access
+      function canAccessChannel() {
+        let channel = get(/databases/$(database)/documents/channels/$(channelId));
+        return !exists(/databases/$(database)/documents/channels/$(channelId)) || 
+               channel.data.get('isPrivate', false) == false ||
+               (isSignedIn() && request.auth.uid in channel.data.get('members', []));
+      }
+
+      function isChannelAdmin() {
+        let channel = get(/databases/$(database)/documents/channels/$(channelId));
+        return isAdmin() || (exists(/databases/$(database)/documents/channels/$(channelId)) && request.auth.uid in channel.data.get('admins', []));
+      }
+
+      function isMutedInChannel() {
+        let channel = get(/databases/$(database)/documents/channels/$(channelId));
+        return exists(/databases/$(database)/documents/channels/$(channelId)) && request.auth.uid in channel.data.get('mutedMembers', []);
+      }
+
+      allow get: if isSignedIn() && (
+        resource == null || 
+        resource.id == 'general' || 
+        resource.data.get('isPrivate', false) == false || 
+        request.auth.uid in resource.data.get('members', [])
+      );
+      allow list: if isSignedIn();
+      
+      allow create: if isSignedIn() && isValidChannel(incoming());
+      allow update: if isSignedIn() && isValidChannel(incoming()) && (
+        (isChannelAdmin()) ||
+        (
+          resource.data.get('isPrivate', false) == false &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['members', 'lastMessageTimestamp', 'lastMessageSnippet', 'lastMessageSenderId']) &&
+          (incoming().members.size() == existing().members.size() + 1) &&
+          (request.auth.uid in incoming().members) &&
+          !(request.auth.uid in existing().members)
+        ) ||
+        (
+          resource.data.get('isPrivate', false) == false &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['members', 'lastMessageTimestamp', 'lastMessageSnippet', 'lastMessageSenderId']) &&
+          (incoming().members.size() == existing().members.size() - 1) &&
+          !(request.auth.uid in incoming().members) &&
+          (request.auth.uid in existing().members)
+        ) ||
+        (
+          (resource.id == 'general' || resource.data.get('isPrivate', false) == false || request.auth.uid in resource.data.get('members', [])) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['lastMessageTimestamp', 'lastMessageSnippet', 'lastMessageSenderId', 'icon'])
+        )
+      );
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && canAccessChannel();
+        allow create: if isSignedIn() && 
+                      isValidMessage(incoming()) && 
+                      canAccessChannel() && 
+                      !isMutedInChannel();
+        allow delete: if isSignedIn() && canAccessChannel() && (existing().senderId == request.auth.uid || isChannelAdmin());
+        allow update: if isSignedIn() && canAccessChannel() && (
+                        (
+                          existing().senderId == request.auth.uid &&
+                          (request.time.toMillis() - existing().timestamp < 300000) &&
+                          incoming().content is string && incoming().content.size() <= 10000 &&
+                          incoming().get('editedAt', 0) is number &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['content', 'editedAt'])
+                        ) || (
+                          incoming().diff(existing()).affectedKeys().hasOnly(['replyCount']) &&
+                          incoming().get('replyCount', 0) is number
+                        ) || (
+                          incoming().diff(existing()).affectedKeys().hasOnly(['reactions']) &&
+                          incoming().get('reactions', {}) is map
+                        )
+                      );
+      }
+
+      match /typing/{userId} {
+        allow read: if isSignedIn() && canAccessChannel();
+        allow create, update: if isOwner(userId) && isValidTyping(incoming()) && canAccessChannel();
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /files/{fileId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidFile(incoming());
+      // Client updates: replace upload, add/restore version, toggle 'important' (FileBrowser.tsx)
+      allow update: if isSignedIn() &&
+                    existing().ownerId == request.auth.uid &&
+                    isValidFile(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(
+                      ['size', 'type', 'url', 'ownerId', 'ownerName', 'versions', 'createdAt', 'updatedAt', 'important']
+                    );
+      allow delete: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /meetings/{meetingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidMeeting(incoming()) && incoming().organizerId == request.auth.uid;
+      allow update: if isSignedIn() && isValidMeeting(incoming()) && (
+                      (existing().organizerId == request.auth.uid) ||
+                      (isAdmin())
+                    ) && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'startTime', 'endTime', 'attendees', 'platform']);
+      allow delete: if isSignedIn() && (existing().organizerId == request.auth.uid || isAdmin());
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidAuditLog(incoming());
+    }
+
+    function isValidAppUpdate(data) {
+      return data.keys().hasAll(['title', 'content', 'version', 'authorId', 'authorName', 'timestamp', 'status']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 20000 &&
+             data.version is string && data.version.size() <= 50 &&
+             data.authorId is string &&
+             data.authorName is string &&
+             data.timestamp is number &&
+             data.status in ['published', 'draft'];
+    }
+
+    match /app_updates/{updateId} {
+      allow read: if isSignedIn() && (resource.data.status == 'published' || isAdmin());
+      allow list: if isSignedIn();
+      allow create: if isAdmin() && isValidAppUpdate(incoming());
+      allow update: if isAdmin() && isValidAppUpdate(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // Connection test document
+    match /test/connection {
+      allow get: if true;
+    }
+  }
+}

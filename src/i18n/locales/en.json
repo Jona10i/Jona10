@@ -1,0 +1,65 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "search": "Search...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "settings": "Settings",
+    "logout": "Sign Out",
+    "optional": "(Optional)"
+  },
+  "sidebar": {
+    "channels": "Channels",
+    "directMessages": "Direct Messages",
+    "files": "Files",
+    "auditLogs": "Audit Logs",
+    "newChannel": "New Channel",
+    "createChannel": "Create Channel",
+    "channelName": "Channel Name",
+    "channelDescription": "Description",
+    "isPrivate": "Private Channel",
+    "privateDescription": "Only invited members can view this channel.",
+    "create": "Create"
+  },
+  "chat": {
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "confirmFile": "Confirm File Upload",
+    "confirmFileMessage": "Are you sure you want to send this file to the workspace?",
+    "confirmSend": "Send File"
+  },
+  "files": {
+    "title": "Workspace Assets",
+    "subtitle": "Shared file repository for seamless team collaboration.",
+    "syncLocal": "Sync Local",
+    "download": "Download",
+    "upload": "Upload File",
+    "filterByOwner": "Filter by Owner",
+    "allOwners": "All Owners",
+    "searchPlaceholder": "Search by filename...",
+    "editMessage": "Edit Message",
+    "save": "Save",
+    "edited": "Edited",
+    "confirmSync": "Confirm Local Sync",
+    "confirmSyncMessage": "This will overwrite any existing files with the same name in your local directory. Do you want to proceed?",
+    "syncProceed": "Sync Now",
+    "syncPathLabel": "Destination Folder (Optional)",
+    "syncPathPlaceholder": "e.g. downloads/project1"
+  },
+  "audit": {
+    "title": "Activity Audit",
+    "subtitle": "Transparence and security log of all workspace events.",
+    "event": "Event",
+    "user": "User",
+    "time": "Time",
+    "noLogs": "No activity logs found yet."
+  },
+  "empty": {
+    "files": "No files found",
+    "filesSubtitle": "Upload something in a channel to see it here.",
+    "messages": "Start of the space",
+    "messagesSubtitle": "Files shared here are instantly available to all members."
+  }
+}

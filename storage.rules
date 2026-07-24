@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Firebase Storage security rules for SwiftDrop Workspace.
+// Mirrors the trust model in firestore.rules: everything is denied unless
+// a rule below explicitly grants it, and all access requires sign-in.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ------------------------------------------------------------------
+    // User avatars — uploaded by UserProfileProvider.tsx
+    // Path shape: avatars/{uid}_{timestamp}_{originalFileName}
+    // Client limit: image formats under 5MB.
+    // ------------------------------------------------------------------
+    match /avatars/{fileName} {
+      allow read: if isSignedIn();
+      // The uid prefix ties each avatar to its owner, so a user cannot
+      // overwrite another user's avatar by guessing the file name.
+      allow create, update: if isSignedIn()
+        && fileName.matches('^' + request.auth.uid + '_.+')
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isSignedIn()
+        && fileName.matches('^' + request.auth.uid + '_.+');
+    }
+
+    // ------------------------------------------------------------------
+    // Workspace files — uploaded by ChatRoom.tsx
+    // Path shape: workspaces/files/{timestamp}_{originalFileName}
+    // Hard cap of 100MB per object to prevent storage abuse.
+    // ------------------------------------------------------------------
+    match /workspaces/files/{fileName} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && request.resource.size < 100 * 1024 * 1024;
+      // Objects are immutable per upload (timestamped names); deletions
+      // are lifecycle-managed, not exposed in the client. Deny by default.
+    }
+
+    // ------------------------------------------------------------------
+    // Default deny for anything else in the bucket.
+    // ------------------------------------------------------------------
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

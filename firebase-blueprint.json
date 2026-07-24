@@ -1,0 +1,188 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and presence data",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "avatar": { "type": "string" },
+        "status": { "type": "string", "enum": ["online", "offline", "away"] },
+        "lastSeen": { "type": "number" },
+        "lastRead": { 
+          "type": "object",
+          "description": "Map of channelId to last read message timestamp"
+        },
+        "role": { "type": "string", "enum": ["admin", "member", "guest"] },
+        "publicKey": { "type": "string" },
+        "department": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "pinnedChannels": { "type": "array", "items": { "type": "string" } },
+        "pinnedDMs": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name", "email", "status", "lastSeen"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message or file transfer event",
+      "type": "object",
+      "properties": {
+        "channelId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "editedAt": { "type": "number" },
+        "type": { "type": "string", "enum": ["text", "file"] },
+        "fileId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileSize": { "type": "number" },
+        "fileUrl": { "type": "string" },
+        "threadId": { "type": "string" },
+        "replyCount": { "type": "number" },
+        "reactions": { "type": "object", "description": "Map of emoji to array of userIds" }
+      },
+      "required": ["channelId", "senderId", "senderName", "content", "timestamp", "type"]
+    },
+    "File": {
+      "title": "File",
+      "description": "Metadata for uploaded workspace files",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "size": { "type": "number" },
+        "type": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "url": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "category": { "type": "string", "enum": ["document", "image", "video", "archive", "other"] }
+      },
+      "required": ["name", "size", "type", "ownerId", "ownerName", "url", "createdAt", "category"]
+    },
+    "Channel": {
+      "title": "Channel",
+      "description": "Chat channel or department room",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "isPrivate": { "type": "boolean" },
+        "members": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name", "isPrivate", "members"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "System-wide activity record",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["auth", "file", "channel", "system"] },
+        "action": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "severity": { "type": "string", "enum": ["info", "warning", "critical"] }
+      },
+      "required": ["type", "action", "userId", "userName", "timestamp", "severity"]
+    },
+    "TypingIndicator": {
+      "title": "Typing Indicator",
+      "description": "Real-time typing status for users in channels",
+      "type": "object",
+      "properties": {
+        "channelId": { "type": "string" },
+        "threadId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "isTyping": { "type": "boolean" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["channelId", "userId", "userName", "isTyping", "updatedAt"]
+    },
+    "Meeting": {
+      "title": "Meeting",
+      "description": "Scheduled team meeting",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "startTime": { "type": "number" },
+        "endTime": { "type": "number" },
+        "organizerId": { "type": "string" },
+        "attendees": { "type": "array", "items": { "type": "string" } },
+        "platform": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["title", "startTime", "endTime", "organizerId", "attendees"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "User personal reminder",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "notifyTime": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "title", "completed", "notifyTime"]
+    },
+    "AppUpdate": {
+      "title": "App Update",
+      "description": "Release notes / system updates for client review",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "version": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "status": { "type": "string", "enum": ["published", "draft"] }
+      },
+      "required": ["title", "content", "version", "authorId", "authorName", "timestamp", "status"]
+    }
+  },
+  "firestore": {
+    "app_updates/{updateId}": {
+      "schema": "AppUpdate",
+      "description": "System updates and release notes"
+    },
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "channels/{channelId}": {
+      "schema": "Channel",
+      "description": "Workspace channels"
+    },
+    "channels/{channelId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a channel"
+    },
+    "channels/{channelId}/typing/{userId}": {
+      "schema": "TypingIndicator",
+      "description": "Typing indicators for users in a channel"
+    },
+    "files/{fileId}": {
+      "schema": "File",
+      "description": "Global workspace files"
+    },
+    "audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Global activity audit logs"
+    },
+    "meetings/{meetingId}": {
+      "schema": "Meeting",
+      "description": "Scheduled team meetings"
+    },
+    "users/{userId}/reminders/{reminderId}": {
+      "schema": "Reminder",
+      "description": "Personal reminders for the user"
+    }
+  }
+}
