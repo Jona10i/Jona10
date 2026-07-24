@@ -225,6 +225,13 @@ The user uploaded a zip snapshot of the upstream project. Full-tree diff showed 
 - **Experiment**: stopped the `tunnel` job (its URL is now dead) and asked the user to hit **"Retry this candidate"** with no tunnel running. If next turn's `git status` is clean, finalization succeeded and the loop is broken; a fresh tunnel (new URL) will then be started.
 - **Note for user**: if finalization still fails with the tunnel stopped, next suspects are the long-running `preview` job itself, or a pure platform-side fault → support ticket.
 
+## Round 23 — Tunnel exonerated (5th reversion); platform-side fault; support draft
+
+- **Experiment result: NEGATIVE.** Fifth reversion occurred at the turn boundary **with no tunnel running** — the tunnel was not the blocker. The `preview` job is also largely exonerated by history (it was running at Round 13 when finalization last succeeded). Conclusion: **platform-side finalization fault.**
+- Ritual restore (gen 10) + tunnel restarted with a **new URL: `https://refugees-bite-katrina-trim.trycloudflare.com`** (old one is dead; if the old hostname was added to Firebase Auth authorized domains, add this one instead). Both platforms verified: `/` → 200, probe → `{"ok":true}`.
+- **Support-ticket draft (paste to platform support):**
+  > Workspace "finalization" fails every turn since ~July 24 22:30 UTC. Symptom 1: UI shows "Workspace finalization failed. Retry this candidate." Symptom 2: at every new agent turn, workspace files are rolled back to a stale snapshot (~4 source files: server.ts, vite.config.ts, src/App.tsx, PROGRESS.md). Ruled out on our side: tunnel process (reversion reproduces with it stopped), dev-server process (finalization previously succeeded with it running), disk space (17% used). Mitigation in place: local git repo; we detect via `git status` and restore each turn. Please fix finalization or advise.
+
 ---
 
 ## ⏳ Pending / next up
