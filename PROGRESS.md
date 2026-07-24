@@ -207,6 +207,12 @@ The user uploaded a zip snapshot of the upstream project. Full-tree diff showed 
 - **Decision logged**: user chose to keep the **quick tunnel** (random URL each restart) rather than a named Cloudflare tunnel (requires CF account login + a domain in a CF zone) or ngrok's free static domain. Hosting deploy for a permanent URL deferred to later.
 - **Mitigation added**: initialized a local `git` repo and committed a baseline — future sync reversions are now one `git status`/`git diff` away and restorable with `git checkout -- <file>`.
 
+## Round 20 — Second sync reversion; git restore validated; root cause hypothesized
+
+- The sync reverted the **same 4 files a second time** (`server.ts`, `vite.config.ts`, `src/App.tsx`, `PROGRESS.md` → Round-13 snapshot). Detected instantly via `git status` (4 dirty files vs baseline), restored in one command (`git restore`), rebuilt, restarted `preview` (gen 7), re-verified localhost + tunnel — all green. Total recovery: ~2 minutes vs full manual re-application last time.
+- **Root-cause hypothesis**: the platform's canonical workspace copy is frozen at the Round-13 era because **"Workspace finalization" keeps failing** (the user saw `Workspace finalization failed. Retry this candidate.`). Each turn boundary re-syncs the sandbox from that stale canonical copy → our newer edits get rolled back. **Action for user**: hit "Retry this candidate" in the platform UI; if finalization succeeds, the canonical copy updates and the reverts should stop. If it keeps failing, report to platform support (mention both symptoms).
+- **Turn-start ritual from now on**: `git status` → if dirty without our own edits, `git restore . && npm run build` + restart `preview`.
+
 ---
 
 ## ⏳ Pending / next up
