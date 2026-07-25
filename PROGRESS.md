@@ -232,6 +232,11 @@ The user uploaded a zip snapshot of the upstream project. Full-tree diff showed 
 - **Support-ticket draft (paste to platform support):**
   > Workspace "finalization" fails every turn since ~July 24 22:30 UTC. Symptom 1: UI shows "Workspace finalization failed. Retry this candidate." Symptom 2: at every new agent turn, workspace files are rolled back to a stale snapshot (~4 source files: server.ts, vite.config.ts, src/App.tsx, PROGRESS.md). Ruled out on our side: tunnel process (reversion reproduces with it stopped), dev-server process (finalization previously succeeded with it running), disk space (17% used). Mitigation in place: local git repo; we detect via `git status` and restore each turn. Please fix finalization or advise.
 
+## Round 24 — Seventh reversion handled (July 25, 2026)
+
+- Same 4 files reverted again at the turn boundary. The git ritual restored them instantly, rebuilt, and restarted `preview` (gen 11). Verified: `/` → 200, probe → `{"ok":true}`. The platform-side finalization fault persists — no tunnel running this turn either, so the experiment from Round 22/23 holds: it's not a workspace-side process.
+- **Status**: app fully operational on `localhost:3000`. The loop continues until platform support fixes finalization or the user successfully retries the candidate.
+
 ---
 
 ## ⏳ Pending / next up
