@@ -237,6 +237,13 @@ The user uploaded a zip snapshot of the upstream project. Full-tree diff showed 
 - Same 4 files reverted again at the turn boundary. The git ritual restored them instantly, rebuilt, and restarted `preview` (gen 11). Verified: `/` → 200, probe → `{"ok":true}`. The platform-side finalization fault persists — no tunnel running this turn either, so the experiment from Round 22/23 holds: it's not a workspace-side process.
 - **Status**: app fully operational on `localhost:3000`. The loop continues until platform support fixes finalization or the user successfully retries the candidate.
 
+## Round 25 — GitHub backup established (July 25, 2026)
+
+- **Persistence secured**: pushed all 24 rounds of work to `https://github.com/Jona10i/Jona10` (branch `main`, commit `b7f6309`). Used a fine-grained PAT with Contents: read-write. Force-pushed over the remote's auto-generated "Initial commit" since our local history is complete and authoritative.
+- **Token sanitized**: removed from `.git/config` after push (remote URL now `https://github.com/Jona10i/Jona10.git`, no embedded credentials). Future pushes will prompt for auth or need a new token.
+- **Impact**: the workspace is now durable. If the platform's finalization never recovers, or if the sandbox recycles, the full project (Rounds 1–24, all commits, all fixes) survives on GitHub. The platform-side fault is now an inconvenience, not a data-loss risk.
+- **Verified**: `git ls-remote origin HEAD` → `b7f6309...` ✅
+
 ---
 
 ## ⏳ Pending / next up
