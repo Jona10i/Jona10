@@ -22,11 +22,11 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main_db:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@timescaledb:5432/netmon
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@timescaledb:5432/netpulse
       REDIS_URL: redis://redis:6379/0
     depends_on:
       timescaledb:
@@ -48,14 +48,14 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: netmon
+      POSTGRES_DB: netpulse
     ports:
       - "5432:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d netmon"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d netpulse"]
       interval: 10s
       timeout: 5s
       retries: 5
