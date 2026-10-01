@@ -1,10 +1,12 @@
-"""
+"""  
 NetPulse FastAPI backend with SQLAlchemy + TimescaleDB persistence.
-Simplified version using proper FastAPI Depends pattern.
+With background check execution and Slack alerting.
 """
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -16,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from check_runner import CheckRunner
 from models import (
     Alert,
     AlertRule,
@@ -25,6 +28,9 @@ from models import (
     Event,
     Metric,
 )
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Database setup
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "changeme")
@@ -70,6 +76,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Background check runner
+check_runner: Optional[CheckRunner] = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background check runner on app startup."""
+    global check_runner
+    check_runner = CheckRunner(engine, SessionLocal)
+    asyncio.create_task(check_runner.start())
+    logger.info("NetPulse API started with check runner")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop background check runner on app shutdown."""
+    global check_runner
+    if check_runner:
+        await check_runner.stop()
+    logger.info("NetPulse API shutdown")
 
 
 def _now_ms() -> int:
