@@ -97,8 +97,10 @@ class CheckRunner:
             result_status = result.status
             result_latency = result.latency_ms
 
+        # Capture the persisted state before applying this result.
+        old_status = check.status
+
         # Update check record
-        now_ms = int(executed_at.timestamp() * 1000)
         check.last_checked_at = executed_at
         check.next_due_at = executed_at.replace(microsecond=0) if check.interval else executed_at
         if check.next_due_at:
@@ -127,13 +129,27 @@ class CheckRunner:
         db.add(metric)
 
         # Handle state transitions and alerting
-        await self._handle_status_change(db, device, check, result_status)
+        await self._handle_status_change(
+            db,
+            device,
+            check,
+            old_status,
+            result_status,
+            result_latency,
+        )
 
         logger.info(f"Check {check.id} ({device.name}/{check.type}) executed: {result_status}")
 
-    async def _handle_status_change(self, db, device: Device, check: Check, new_status: str):
+    async def _handle_status_change(
+        self,
+        db,
+        device: Device,
+        check: Check,
+        old_status: str,
+        new_status: str,
+        latency_ms: float | None,
+    ):
         """Handle status changes and trigger alerts."""
-        old_status = check.status
 
         # Check if we should fire an alert
         if old_status != "down" and new_status == "down":
@@ -168,14 +184,14 @@ class CheckRunner:
                 state="resolved",
             )
 
-        elif new_status == "degraded" and check.latency_ms and check.latency_ms > check.crit_ms:
+        elif new_status == "degraded" and latency_ms and latency_ms > check.crit_ms:
             # High latency alert
             await self._create_alert(
                 db,
                 device,
                 check,
                 "warn",
-                f"{device.name} latency {check.latency_ms:.0f}ms exceeds threshold",
+                f"{device.name} latency {latency_ms:.0f}ms exceeds threshold",
             )
             # Send to Slack
             await send_slack_alert(
@@ -183,7 +199,7 @@ class CheckRunner:
                 device_name=device.name,
                 check_type=check.type,
                 severity="warn",
-                message=f"{device.name} latency is {check.latency_ms:.0f}ms",
+                message=f"{device.name} latency is {latency_ms:.0f}ms",
                 state="firing",
             )
 
