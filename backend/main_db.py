@@ -19,6 +19,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from check_runner import CheckRunner
+from security import SecurityMiddleware
 from models import (
     Alert,
     AlertRule,
@@ -75,6 +76,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    SecurityMiddleware,
+    redis_url=os.getenv("REDIS_URL", "redis://redis:6379/0"),
 )
 
 # Background check runner

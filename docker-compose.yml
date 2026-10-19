@@ -29,6 +29,8 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@timescaledb:5432/netpulse
       REDIS_URL: redis://redis:6379/0
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      API_AUTH_KEY: ${API_AUTH_KEY:-}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-120}
     depends_on:
       timescaledb:
         condition: service_healthy
