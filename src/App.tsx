@@ -5,11 +5,13 @@ import {
   BarChart3,
   Bell,
   LayoutDashboard,
+  Menu,
   Pause,
   Play,
   Radio,
   ScrollText,
   Server,
+  X,
 } from 'lucide-react';
 import { useMonitor } from './store/monitor';
 import { Dashboard } from './pages/Dashboard';
@@ -20,135 +22,116 @@ import { ReportsPage } from './pages/Reports';
 
 type Route = 'dashboard' | 'devices' | 'events' | 'alerts' | 'reports';
 
+const routeMeta: Record<Route, { label: string; eyebrow: string; description: string }> = {
+  dashboard: { label: 'Dashboard', eyebrow: 'Operations overview', description: 'Monitor infrastructure health in real time.' },
+  devices: { label: 'Devices', eyebrow: 'Infrastructure inventory', description: 'Manage devices and their monitoring checks.' },
+  events: { label: 'Events', eyebrow: 'Activity stream', description: 'Review system activity and operational changes.' },
+  alerts: { label: 'Alerts', eyebrow: 'Incident center', description: 'Triage active incidents and alert policies.' },
+  reports: { label: 'Reports', eyebrow: 'Performance analytics', description: 'Review uptime, latency, and service trends.' },
+};
+
+const navItems = [
+  { id: 'dashboard' as Route, icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'devices' as Route, icon: Server, label: 'Devices' },
+  { id: 'events' as Route, icon: ScrollText, label: 'Events' },
+  { id: 'alerts' as Route, icon: Bell, label: 'Alerts' },
+  { id: 'reports' as Route, icon: BarChart3, label: 'Reports' },
+];
+
 export default function App() {
   const [route, setRoute] = useState<Route>('dashboard');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const running = useMonitor((s) => s.running);
   const setRunning = useMonitor((s) => s.setRunning);
   const simSpeed = useMonitor((s) => s.simSpeed);
   const setSimSpeed = useMonitor((s) => s.setSimSpeed);
   const alerts = useMonitor((s) => s.alerts);
   const activeAlerts = alerts.filter((a) => a.state !== 'resolved').length;
+  const meta = routeMeta[route];
 
-  // Global tick loop — the heartbeat of the simulated engine.
   useEffect(() => {
     const id = window.setInterval(() => useMonitor.getState().tick(), 2000);
-    // Also kick immediately so the first render has data quickly.
     useMonitor.getState().tick();
     return () => window.clearInterval(id);
   }, []);
 
-  const NavItem = ({
-    id,
-    icon: Icon,
-    label,
-    badge,
-  }: {
-    id: Route;
-    icon: React.ElementType;
-    label: string;
-    badge?: number;
-  }) => {
-    const active = route === id;
-    return (
-      <button
-        onClick={() => setRoute(id)}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
-          ${active
-            ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
-            : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent'}`}
-      >
-        <Icon className="w-4 h-4" />
-        <span className="flex-1 text-left">{label}</span>
-        {typeof badge === 'number' && badge > 0 && (
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            {badge}
-          </span>
-        )}
-      </button>
-    );
+  const navigate = (nextRoute: Route) => {
+    setRoute(nextRoute);
+    setMobileNavOpen(false);
   };
 
-  return (
-    <div className="min-h-screen flex">
-      {/* Sidebar */}
-      <aside className="w-60 shrink-0 border-r border-slate-800/80 bg-slate-950/60 backdrop-blur px-4 py-5 flex flex-col">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="relative">
-            <Radio className="w-7 h-7 text-cyan-400" />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 pulse-dot" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-slate-100 leading-tight">NetPulse</div>
-            <div className="text-[10px] uppercase tracking-widest text-slate-500">Live Monitor</div>
-          </div>
-        </div>
-
-        <nav className="space-y-1 flex-1">
-          <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
-          <NavItem id="devices" icon={Server} label="Devices" />
-          <NavItem id="events" icon={ScrollText} label="Events" />
-          <NavItem id="alerts" icon={Bell} label="Alerts" badge={activeAlerts} />
-          <NavItem id="reports" icon={BarChart3} label="Reports" />
-        </nav>
-
-        <div className="mt-4 border-t border-slate-800 pt-4">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Engine</div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className={`w-2 h-2 rounded-full ${running ? 'bg-emerald-400 pulse-dot' : 'bg-slate-500'}`} />
-            <span className="text-xs text-slate-300">{running ? 'Streaming' : 'Paused'}</span>
-          </div>
+  const Navigation = ({ mobile = false }: { mobile?: boolean }) => (
+    <nav className={mobile ? 'space-y-1' : 'space-y-1.5'} aria-label="Primary navigation">
+      {navItems.map(({ id, icon: Icon, label }) => {
+        const active = route === id;
+        return (
           <button
-            onClick={() => setRunning(!running)}
-            className={`w-full flex items-center justify-center gap-1.5 text-xs rounded-lg py-1.5 border transition
-              ${running
-                ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
-                : 'border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10'}`}
+            key={id}
+            onClick={() => navigate(id)}
+            className={`nav-item ${active ? 'nav-item-active' : ''}`}
+            aria-current={active ? 'page' : undefined}
           >
-            {running ? <><Pause className="w-3.5 h-3.5" /> Pause</> : <><Play className="w-3.5 h-3.5" /> Resume</>}
+            <Icon className="h-[18px] w-[18px]" />
+            <span>{label}</span>
+            {id === 'alerts' && activeAlerts > 0 && <span className="nav-badge">{activeAlerts}</span>}
           </button>
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] mb-1">
-              <span className="text-slate-400">Sim speed</span>
-              <span className="text-slate-200 font-mono">{simSpeed}×</span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={120}
-              step={1}
-              value={simSpeed}
-              onChange={(e) => setSimSpeed(Number(e.target.value))}
-              className="w-full accent-cyan-400"
-            />
-          </div>
+        );
+      })}
+    </nav>
+  );
+
+  const EngineControl = () => (
+    <section className="engine-panel">
+      <div className="section-label">Simulation engine</div>
+      <div className="engine-status">
+        <span className={`status-orb ${running ? 'status-orb-live' : 'status-orb-paused'}`} />
+        <span>{running ? 'Streaming live data' : 'Stream paused'}</span>
+      </div>
+      <button className="engine-button" onClick={() => setRunning(!running)}>
+        {running ? <><Pause className="h-3.5 w-3.5" /> Pause stream</> : <><Play className="h-3.5 w-3.5" /> Resume stream</>}
+      </button>
+      <label className="speed-control">
+        <span>Simulation speed</span>
+        <strong>{simSpeed}×</strong>
+        <input type="range" min={1} max={120} step={1} value={simSpeed} onChange={(e) => setSimSpeed(Number(e.target.value))} />
+      </label>
+    </section>
+  );
+
+  return (
+    <div className="app-shell">
+      <aside className="desktop-sidebar">
+        <div className="brand-block">
+          <div className="brand-mark"><Radio className="h-5 w-5" /><span /></div>
+          <div><div className="brand-name">NetPulse</div><div className="brand-subtitle">Network observability</div></div>
         </div>
+        <div className="sidebar-heading">Workspace</div>
+        <Navigation />
+        <div className="sidebar-spacer" />
+        <EngineControl />
+        <div className="sidebar-footer"><span className="footer-dot" /> All systems connected</div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b border-slate-800/80 px-6 flex items-center justify-between bg-slate-950/40 backdrop-blur">
-          <div className="flex items-center gap-3">
-            <Activity className="w-4 h-4 text-cyan-400" />
-            <h1 className="text-sm font-medium text-slate-200 capitalize">{route}</h1>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-slate-400">
-            {activeAlerts > 0 && (
-              <span className="flex items-center gap-1.5 text-rose-300">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                {activeAlerts} active
-              </span>
-            )}
-            <span>
-              Connected · WS <span className="text-emerald-400 font-mono">simulated</span>
-            </span>
-          </div>
+      {mobileNavOpen && <button className="mobile-backdrop" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
+      <aside className={`mobile-sidebar ${mobileNavOpen ? 'mobile-sidebar-open' : ''}`}>
+        <div className="brand-block"><div className="brand-mark"><Radio className="h-5 w-5" /><span /></div><div><div className="brand-name">NetPulse</div><div className="brand-subtitle">Network observability</div></div><button className="icon-button ml-auto" onClick={() => setMobileNavOpen(false)}><X className="h-5 w-5" /></button></div>
+        <div className="sidebar-heading">Workspace</div><Navigation mobile /><div className="sidebar-spacer" /><EngineControl />
+      </aside>
+
+      <main className="main-shell">
+        <header className="topbar">
+          <div className="topbar-left"><button className="mobile-menu-button" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation"><Menu className="h-5 w-5" /></button><div className="breadcrumb"><span>NetPulse</span><span>/</span><strong>{meta.label}</strong></div></div>
+          <div className="topbar-right"><div className="connection-chip"><span className="footer-dot" /> Live connection</div>{activeAlerts > 0 && <div className="alert-chip"><AlertTriangle className="h-3.5 w-3.5" /> {activeAlerts} active</div>}</div>
         </header>
-        <div className="flex-1 overflow-y-auto p-6">
-          {route === 'dashboard' && <Dashboard />}
-          {route === 'devices' && <DevicesPage />}
-          {route === 'events' && <EventsPage />}
-          {route === 'alerts' && <AlertsPage />}
-          {route === 'reports' && <ReportsPage />}
+        <div className="content-shell">
+          <div className="page-heading"><div><div className="page-eyebrow">{meta.eyebrow}</div><h1>{meta.label}</h1><p>{meta.description}</p></div><div className="page-live"><Activity className="h-4 w-4" /><span>Updated live</span></div></div>
+          <div className="page-content">
+            {route === 'dashboard' && <Dashboard />}
+            {route === 'devices' && <DevicesPage />}
+            {route === 'events' && <EventsPage />}
+            {route === 'alerts' && <AlertsPage />}
+            {route === 'reports' && <ReportsPage />}
+          </div>
         </div>
       </main>
     </div>
